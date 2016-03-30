@@ -29,7 +29,7 @@ int max(int a, int b)
 
 SimSearcher::SimSearcher()
 {
-	//m_tree = new Trie();
+	m_tree = new Trie();
 	m_string_size = new int[MAX_ITEM];
 	m_string_list = new char*[MAX_ITEM];
 	searchQueue = new int[MAX_ITEM];
@@ -49,7 +49,7 @@ SimSearcher::SimSearcher()
 
 SimSearcher::~SimSearcher()
 {
-	//delete m_tree;
+	delete m_tree;
 	delete[] m_string_list;
 	delete[] m_string_size;
 	delete[] searchQueue;
@@ -71,15 +71,15 @@ int SimSearcher::createIndex(const char *filename, unsigned q)
         m_string_size[m_idx] = length;
       	for (int i = 0; i < length - q + 1; i++)
        	{
-       		char temp = line[i + q];
+       		/*char temp = line[i + q];
        		line[i + q] = '\0';
        		if (m_map.find(line + i) == m_map.end())
        		{
        			m_map[line + i] = new std::vector<int>;
        		}
        		m_map[line + i]->push_back(m_idx);
-       		line[i + q] = temp;
-       		//m_tree->insert(line + i, m_idx, m_q);
+       		line[i + q] = temp;*/
+       		m_tree->insert(line + i, m_idx, m_q);
        	}
         m_idx++;
     }
@@ -113,39 +113,49 @@ int SimSearcher::searchED(const char *query, unsigned threshold, vector<pair<uns
 
 	int lists_idx = 0;
 	void* ptr;
-	char line [257];
-	memcpy(line, query, length_query + 1);
+	//char line [257];
+	//memcpy(line, query, length_query + 1);
 
 	for (int i = 0; i < length_query - m_q + 1; i++)
     {
-       	//ptr = m_tree->searchStr((char*)query + i, m_q);
-       	char temp = line[i + m_q];
-       	line[i + m_q] = 0;
-       	auto it = m_map.find(line + i);
-		if (it != m_map.end()) 
+       	ptr = m_tree->searchStr((char*)query + i, m_q);
+       	//char temp = line[i + m_q];
+       	//line[i + m_q] = 0;
+       	//auto it = m_map.find(line + i);
+		if (ptr != NULL) 
 		{
-			sortItem item(it->second);
+			sortItem item((std::vector<int>*)ptr);
 			if (item.size > 0) lists[lists_idx++] = item;
 		}
-		line[i + m_q] = temp;
     }
 
     std::sort(lists, lists + lists_idx);
+    std::vector<int> verifyList;
 
 	for (int i = 0; i < lists_idx - t + 1; i++)
 	{
 	  	for (int j = 0; j < lists[i].size; j++)
 	  	{
 	   		int temp = (*(lists[i].data))[j];
-	   		dps = DP(query, temp, length_query, thres);	
-	   		//dps = DP(query, temp, length_query, thres);	
-	   		if (dps >= 0) result.push_back(std::make_pair(temp, dps));
+	   			
+	   		verifyList.push_back(temp);
+	   		//dps = DP(query, temp, length_query, thres);
 	   	}
 	}
 
+	std::sort(verifyList.begin(), verifyList.end());
+	auto it = std::unique(verifyList.begin(), verifyList.end());
+	verifyList.resize(std::distance(verifyList.begin(), it));
+	for (int i = 0; i < verifyList.size(); i++)
+	{
+		int temp = verifyList[i];
+		dps = DP(query, temp, length_query, thres);
+		if (dps >= 0) result.push_back(std::make_pair(temp, dps));
+	}
+
 	std::sort(result.begin(), result.end());
-	auto it = std::unique(result.begin(), result.end());
-	result.resize(std::distance(result.begin(),it));
+	//auto it = std::unique(result.begin(), result.end());
+	//result.resize(std::distance(result.begin(),it));
 
 	/*for (int i = 0; i < length_query - m_q + 1; i++)
     {

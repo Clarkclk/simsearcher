@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-//#include "Trie.h"
+#include "Trie.h"
 
 const int SUCCESS = 0;
 const int FAILURE = 1;
@@ -33,7 +33,8 @@ public:
 	SimSearcher();
 	~SimSearcher();
 
-	std::unordered_map<std::string, std::vector<int> *> m_map;
+	//std::unordered_map<std::string, std::vector<int> *> m_map;
+	Trie* m_tree;
 	char** m_string_list;
 	int* m_string_size, *searchQueue, *searchList;
 	int m_q;
