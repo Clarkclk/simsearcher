@@ -47,8 +47,8 @@ std::vector<int> * Trie::searchStr(char* str, int length)
 	while (it < length)
 	{
 		int index = str[it];
-		if (m_pool[node].m_child_nodes[index] == 0) return NULL;
 		node = m_pool[node].m_child_nodes[index];
+		if (node == 0) return NULL;
 		it++;
 	}
 	return &(m_pool[node].m_list);

@@ -50,6 +50,10 @@ SimSearcher::SimSearcher()
 SimSearcher::~SimSearcher()
 {
 	delete m_tree;
+	delete[] m_string_list;
+	delete[] m_string_size;
+	delete[] searchQueue;
+	delete[] searchList;
 }
 
 int SimSearcher::createIndex(const char *filename, unsigned q)
@@ -65,7 +69,7 @@ int SimSearcher::createIndex(const char *filename, unsigned q)
         m_string_list[m_idx] = new char[257];
         memcpy(m_string_list[m_idx], line, length);
         m_string_size[m_idx] = length;
-       	for (int i = 0; i < length - q + 1; i++)
+      	for (int i = 0; i < length - q + 1; i++)
        	{
        		m_tree->insert(line + i, m_idx, m_q);
        	}
@@ -83,14 +87,28 @@ int SimSearcher::searchJaccard(const char *query, double threshold, vector<pair<
 int SimSearcher::searchED(const char *query, unsigned threshold, vector<pair<unsigned, unsigned> > &result)
 {
 	result.clear();
-	int length_query = strlen(query);
 	int thres = threshold;
-	int lists_idx = 0;
+	int length_query = strlen(query);
+	int t = length_query - m_q + 1 - thres * m_q;
+	int dps;
 	
+	if (t <= 0)
+	{
+		for (int i = 0; i < m_idx; i++)
+		{
+			dps = DP(query, i, length_query, thres);
+	    	if (dps >= 0) result.push_back(std::make_pair(i, dps));
+		}
+		return SUCCESS;
+	}
+
+
+	int lists_idx = 0;
+	void* ptr;
 
 	for (int i = 0; i < length_query - m_q + 1; i++)
     {
-       	void* ptr = m_tree->searchStr((char*)query + i, m_q);
+       	ptr = m_tree->searchStr((char*)query + i, m_q);
 		if (ptr != NULL) 
 		{
 			sortItem item((std::vector<int>*)ptr);
@@ -98,72 +116,40 @@ int SimSearcher::searchED(const char *query, unsigned threshold, vector<pair<uns
 		}
     }
 
-
-    int searchList_idx = 0;
     memset(searchQueue, 0, sizeof(int) * MAX_ITEM);
 
     std::sort(lists, lists + lists_idx);
 
-    int t = length_query - m_q + 1 - thres * m_q;
-
-    if (t >= 1)
-    {
-	    for (int i = 0; i < lists_idx - t + 1; i++)
-	    {
-	    	for (int j = 0; j < lists[i].size; j++)
-	    	{
-	    		int temp = (*(lists[i].data))[j];
-	    		if (searchQueue[temp] <= 0)
-	    		{
-	    			searchList[searchList_idx++] = temp;
-	    		}
-	    		searchQueue[temp]++;
-	    	}
-	    }
-
-
-	    for (int i = 0; i < searchList_idx; i++)
-	    {
-	    	if (searchQueue[searchList[i]] >= t)
-	    	{
-	    		int dps = DP(query, searchList[i], length_query, thres);	
-	    		if (dps >= 0) result.push_back(std::make_pair(searchList[i], dps));
-	    		continue;
-	    	}
-
-	    	for (int j = lists_idx - t + 1; j < lists_idx; j++)
-	    	{
-	    		if (std::binary_search(lists[j].data->begin(), lists[j].data->end(), searchList[i]))
-	    		{
-	    			searchQueue[searchList[i]]++;
-
-	    			if (searchQueue[searchList[i]] >= t)
-	    			{
-	    				int dps = DP(query, searchList[i], length_query, thres);
-	    				if (dps >= 0) result.push_back(std::make_pair(searchList[i], dps));
-	    				break;
-	    			}
-	    		}
-	    		if (searchQueue[searchList[i]] + lists_idx - j - 1 < t) break;
-	    	}
-	    }
-
-	}
-	else
+	for (int i = 0; i < lists_idx - t + 1; i++)
 	{
-		for (int i = 0; i < m_idx; i++)
-		{
-			int dps = DP(query, i, length_query, thres);
-	    	if (dps >= 0) result.push_back(std::make_pair(i, dps));
-		}
+	  	for (int j = 0; j < lists[i].size; j++)
+	  	{
+	   		int temp = (*(lists[i].data))[j];
+	   		if (searchQueue[temp] != 0) continue;
+	   		dps = DP(query, temp, length_query, thres);	
+	   		//dps = DP(query, temp, length_query, thres);	
+	   		if (dps >= 0) result.push_back(std::make_pair(temp, dps));
+	   		searchQueue[temp] = 1;
+	   	}
 	}
 
 	std::sort(result.begin(), result.end());
+
+	/*for (int i = 0; i < length_query - m_q + 1; i++)
+    {
+       	ptr = m_tree->searchStr((char*)query + i, m_q);
+		if (ptr != NULL) 
+		{
+			sortItem item((std::vector<int>*)ptr);
+			//if (item.size > 0) lists[lists_idx++] = item;
+		}
+    } */
 	return SUCCESS;
 }
 
 int SimSearcher::DP(const char* query, int item, int length_query, int thres)
 {
+	//int d[257][2 * thres + 2];
 	char* str = m_string_list[item];
 	int length_str = m_string_size[item];
 	if (abs(length_str - length_query) > thres) return -1;
