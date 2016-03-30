@@ -10,7 +10,7 @@
 const int SUCCESS = 0;
 const int FAILURE = 1;
 
-#define MAX_ITEM 1000010
+#define MAX_ITEM 10
 
 struct sortItem
 {
@@ -34,11 +34,15 @@ public:
 	~SimSearcher();
 
 	//std::unordered_map<std::string, std::vector<int> *> m_map;
-	Trie* m_tree;
+	Trie* m_tree_ED;
+	Trie* m_tree_Jaccard;
+	std::vector<std::vector<std::string> > m_string_grams;
+	std::vector<int> m_gram_length[257];
 	char** m_string_list;
 	int* m_string_size, *searchQueue, *searchList;
 	int m_q;
 	int m_idx;
+	int m_min_gram;
 	int d[257][257];
 	sortItem* lists;
 

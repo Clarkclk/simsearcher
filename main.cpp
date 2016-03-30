@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 	double jaccardThreshold = 0.85;
 
 	searcher.createIndex(argv[1], q);
-	searcher.searchJaccard("query", jaccardThreshold, resultJaccard);
+	searcher.searchJaccard("dfk dfdf asdfe", jaccardThreshold, resultJaccard);
 	searcher.searchED("apnqouthtfgabqevqejwavptuysvduqgkdwyyshtxnvyebtwfeuhajaujtpnphtzlrzljhggubfafawmfsuhewbnrschbxgmpgzy", edThreshold, resultED);
 	
 	for (int i = 0; i < resultED.size(); i++)

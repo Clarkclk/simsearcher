@@ -28,7 +28,10 @@ public:
 	~Trie();
 
 	void insert(char* str, int idx, int length);
+	void insert(const char* str, int idx);	
 	std::vector<int> * searchStr(char* str, int length);
+	std::vector<int> * searchStr(const char* str);
+
 };
 
 

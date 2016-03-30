@@ -27,14 +27,22 @@ int max(int a, int b)
 	return b;
 }
 
+double max(double a, double b)
+{
+	if (a > b) return a;
+	return b;
+}
+
 SimSearcher::SimSearcher()
 {
-	m_tree = new Trie();
+	m_tree_ED = new Trie();
+	m_tree_Jaccard = new Trie();
 	m_string_size = new int[MAX_ITEM];
 	m_string_list = new char*[MAX_ITEM];
 	searchQueue = new int[MAX_ITEM];
     searchList = new int[MAX_ITEM];
    	lists = new sortItem[MAX_ITEM];
+   	m_min_gram = 400;
 
 	for (int i = 0; i < 257; i++)
 	{
@@ -49,7 +57,8 @@ SimSearcher::SimSearcher()
 
 SimSearcher::~SimSearcher()
 {
-	delete m_tree;
+	delete m_tree_ED;
+	delete m_tree_Jaccard;
 	delete[] m_string_list;
 	delete[] m_string_size;
 	delete[] searchQueue;
@@ -65,30 +74,135 @@ int SimSearcher::createIndex(const char *filename, unsigned q)
     const int buffer_size = 260;
     while(fp.getline(line, buffer_size))
     {
+    	m_string_grams.push_back(std::vector<std::string>());
+    	//cout << line << endl;
         int length = strlen(line);
         m_string_list[m_idx] = new char[257];
         memcpy(m_string_list[m_idx], line, length);
         m_string_size[m_idx] = length;
       	for (int i = 0; i < length - q + 1; i++)
        	{
-       		/*char temp = line[i + q];
-       		line[i + q] = '\0';
-       		if (m_map.find(line + i) == m_map.end())
+       		//create ED
+       		m_tree_ED->insert(line + i, m_idx, m_q);
+       	}
+       	//create Jaccard
+       	string temp;
+       	for (int i = 0; i < length; i++)
+       	{
+       		if (line[i] == ' ')
        		{
-       			m_map[line + i] = new std::vector<int>;
+       			m_string_grams[m_idx].push_back(temp);
+       			temp = "";
+       			while (line[i] == ' ')
+       			{
+       				i++;
+       			}	
+       			i--;
        		}
-       		m_map[line + i]->push_back(m_idx);
-       		line[i + q] = temp;*/
-       		m_tree->insert(line + i, m_idx, m_q);
+       		else
+       		{
+       			temp += line[i];
+       		}
+       	}
+       	if (temp.size() > 0) m_string_grams[m_idx].push_back(temp);
+       	
+       	std::sort(m_string_grams[m_idx].begin(), m_string_grams[m_idx].end());
+       	auto it = std::unique(m_string_grams[m_idx].begin(), m_string_grams[m_idx].end());
+       	m_string_grams[m_idx].resize(std::distance(m_string_grams[m_idx].begin(), it));
+
+       	m_gram_length[m_string_grams[m_idx].size()].push_back(m_idx);
+       	if (m_string_grams[m_idx].size() < m_min_gram)
+       	{
+       		m_min_gram = m_string_grams[m_idx].size();
+       	}
+
+       	for (auto str = m_string_grams[m_idx].begin(); str != m_string_grams[m_idx].end(); str++)
+       	{
+       		m_tree_Jaccard->insert(str->c_str(), m_idx);
        	}
         m_idx++;
     }
+
 	return SUCCESS;
 }
 
 int SimSearcher::searchJaccard(const char *query, double threshold, vector<pair<unsigned, double> > &result)
 {
 	result.clear();
+	int lists_idx = 0;
+	std::vector<std::string> query_grams;
+	int length_query = strlen(query);
+
+	string temp;
+    for (int i = 0; i < length_query; i++)
+    {
+      	if (query[i] == ' ')
+       	{
+       		query_grams.push_back(temp);
+       		temp = "";
+       		while (query[i] == ' ')
+       		{
+       			i++;
+       		}	
+       		i--;
+       	}
+       	else
+       	{
+       		temp += query[i];
+       	}
+    }
+    if (temp.size() > 0) query_grams.push_back(temp);
+    std::sort(query_grams.begin(), query_grams.end());
+    auto it = std::unique(query_grams.begin(), query_grams.end());
+    query_grams.resize(std::distance(query_grams.begin(), it));
+
+    int grams_query = query_grams.size();
+
+	int list_idx = 0;
+	int t = max(threshold * grams_query, double(grams_query + m_min_gram)) * threshold / (1 + threshold);
+	std::vector<int> candidates;
+	std::vector<int> approved;
+	for (int i = max(t, 0); i < 257; i++)
+	{
+		if (m_gram_length[i].empty()) continue;
+		for (int j = 0; j < m_gram_length[i].size(); j++)
+		{
+			candidates.push_back(m_gram_length[i][j]);
+			approved.push_back(1);
+		}
+	}
+
+	if (candidates.empty()) return SUCCESS;
+
+	void* ptr;
+	for (int i = 0; i < grams_query; i++)
+	{
+		ptr = m_tree_Jaccard->searchStr(query_grams[i].c_str());
+		cout << query_grams[i] << ' ';
+		if (ptr != NULL) 
+		{
+			sortItem item((std::vector<int>*)ptr);
+			if (item.size > 0) lists[lists_idx++] = item;
+			if (item.size > 0)
+			{
+				for (int j = 0; j < item.size; j++)
+				{
+					cout << (*(item.data))[j] << ' ';
+				}
+			}
+			cout << endl;
+		}
+
+	}
+
+
+	/*cout << t << endl;
+	for (int i = 0; i < candidates.size(); i++)
+	{
+		cout << candidates[i] << endl;
+	}
+	*/
+
 	return SUCCESS;
 }
 
@@ -118,7 +232,7 @@ int SimSearcher::searchED(const char *query, unsigned threshold, vector<pair<uns
 
 	for (int i = 0; i < length_query - m_q + 1; i++)
     {
-       	ptr = m_tree->searchStr((char*)query + i, m_q);
+       	ptr = m_tree_ED->searchStr((char*)query + i, m_q);
        	//char temp = line[i + m_q];
        	//line[i + m_q] = 0;
        	//auto it = m_map.find(line + i);
@@ -153,13 +267,12 @@ int SimSearcher::searchED(const char *query, unsigned threshold, vector<pair<uns
 		if (dps >= 0) result.push_back(std::make_pair(temp, dps));
 	}
 
-	std::sort(result.begin(), result.end());
 	//auto it = std::unique(result.begin(), result.end());
 	//result.resize(std::distance(result.begin(),it));
 
 	/*for (int i = 0; i < length_query - m_q + 1; i++)
     {
-       	ptr = m_tree->searchStr((char*)query + i, m_q);
+       	ptr = m_tree_ED->searchStr((char*)query + i, m_q);
 		if (ptr != NULL) 
 		{
 			sortItem item((std::vector<int>*)ptr);
