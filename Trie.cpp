@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 
-#define MAXITEM 2000
+#define MAXITEM 2000000
 
 TrieNode::TrieNode()
 {

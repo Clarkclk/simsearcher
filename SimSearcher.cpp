@@ -6,6 +6,7 @@
 #include <iostream>
 
 #define MAX_LENGTH 256
+#define EPS 1E-6
 
 using namespace std;
 
@@ -129,7 +130,6 @@ int SimSearcher::createIndex(const char *filename, unsigned q)
 int SimSearcher::searchJaccard(const char *query, double threshold, vector<pair<unsigned, double> > &result)
 {
 	result.clear();
-	int lists_idx = 0;
 	std::vector<std::string> query_grams;
 	int length_query = strlen(query);
 
@@ -158,50 +158,51 @@ int SimSearcher::searchJaccard(const char *query, double threshold, vector<pair<
 
     int grams_query = query_grams.size();
 
-	int list_idx = 0;
 	int t = max(threshold * grams_query, double(grams_query + m_min_gram)) * threshold / (1 + threshold);
-	std::vector<int> candidates;
-	std::vector<int> approved;
-	for (int i = max(t, 0); i < 257; i++)
-	{
-		if (m_gram_length[i].empty()) continue;
-		for (int j = 0; j < m_gram_length[i].size(); j++)
-		{
-			candidates.push_back(m_gram_length[i][j]);
-			approved.push_back(1);
-		}
-	}
 
-	if (candidates.empty()) return SUCCESS;
-
-	void* ptr;
+	std::vector<int> freqList;
+	std::vector<int>* ptr;
+	int count = 0;
 	for (int i = 0; i < grams_query; i++)
 	{
 		ptr = m_tree_Jaccard->searchStr(query_grams[i].c_str());
-		cout << query_grams[i] << ' ';
 		if (ptr != NULL) 
 		{
-			sortItem item((std::vector<int>*)ptr);
-			if (item.size > 0) lists[lists_idx++] = item;
-			if (item.size > 0)
+			/*sortItem item((std::vector<int>*)ptr);
+			if (item.size > 0) lists[lists_idx++] = item;*/
+			for (auto it = ptr->begin(); it != ptr->end(); it++)
 			{
-				for (int j = 0; j < item.size; j++)
-				{
-					cout << (*(item.data))[j] << ' ';
-				}
+				freqList.push_back(*it);
+				count++;
 			}
-			cout << endl;
+			std::inplace_merge(freqList.begin(), freqList.begin() + count - ptr->size(), freqList.end());
 		}
-
 	}
 
-
-	/*cout << t << endl;
-	for (int i = 0; i < candidates.size(); i++)
+	count = 0;
+	int pivot = -1;
+	for (int i = 0; i < freqList.size(); i++)
 	{
-		cout << candidates[i] << endl;
+		if (pivot = -1) 
+		{
+			pivot = freqList[i];
+			count = 1;
+			continue;
+		}
+		if (pivot == freqList[i])
+		{
+			count++;
+		}
+		else
+		{
+			double freq = count;
+			double jaccard = freq / (grams_query + i - freq);
+			if (jaccard - threshold > -EPS)result.push_back(std::make_pair(pivot, jaccard));
+			count = 0;
+			pivot = freqList[i];
+		}
+		
 	}
-	*/
 
 	return SUCCESS;
 }

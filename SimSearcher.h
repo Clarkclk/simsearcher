@@ -10,7 +10,7 @@
 const int SUCCESS = 0;
 const int FAILURE = 1;
 
-#define MAX_ITEM 10
+#define MAX_ITEM 1000000
 
 struct sortItem
 {
