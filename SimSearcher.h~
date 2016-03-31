@@ -4,14 +4,13 @@
 #include <utility>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 
 #include "Trie.h"
 
 const int SUCCESS = 0;
 const int FAILURE = 1;
 
-#define MAX_ITEM 1000100
+#define MAX_ITEM 1000000
 
 struct sortItem
 {
@@ -36,10 +35,7 @@ public:
 
 	//std::unordered_map<std::string, std::vector<int> *> m_map;
 	Trie* m_tree_ED;
-	std::unordered_map<int, int> m_freq;
-	std::unordered_set<int> m_flag;
-	std::unordered_map<std::string, int> m_gram_id;
-	std::unordered_map<int, std::vector<int>*> m_jaccard[257];
+	Trie* m_tree_Jaccard;
 	std::vector<std::vector<std::string> > m_string_grams;
 	std::vector<int> m_gram_length[257];
 	char** m_string_list;
@@ -47,7 +43,6 @@ public:
 	int m_q;
 	int m_idx;
 	int m_min_gram;
-	int m_max_gram;
 	int d[257][257];
 	sortItem* lists;
 
